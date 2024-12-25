@@ -1,0 +1,97 @@
+{
+  "info": {
+    "name": "Payment Gateway Collection",
+    "_postman_id": "2f75169c-5d4f-4bc6-a6a6-abc123def456",
+    "description": "Collection for testing Payment Gateway endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"checkoutUuid\": \"checkout-uuid-123\",\n  \"fromAcct\": \"acctA\",\n  \"toAcct\": \"acctB\",\n  \"amount\": \"200\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/payments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/payments/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "payments",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "payment123"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Scheduled Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromAcct\": \"acctA\",\n  \"toAcct\": \"acctB\",\n  \"amount\": \"300\",\n  \"currency\": \"USD\",\n  \"frequency\": \"daily\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/scheduled-payments",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "scheduled-payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

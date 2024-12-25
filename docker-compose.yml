@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  # payment-platform:
+  #   build: .
+  #   container_name: payment-platform
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - mongo
+  #     - redis
+  #   environment:
+  #     MONGO_URI: mongodb://mongo:27017/payments_db
+  #     REDIS_URL: redis://redis:6379
+
+  mongo:
+    image: mongo:6
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:
