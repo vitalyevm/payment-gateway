@@ -13,6 +13,4 @@ export class LedgerRepository {
   async create(data: Partial<LedgerEntry>): Promise<LedgerEntryDocument> {
     return new this.ledgerModel(data).save();
   }
-
-  // add more ledger queries as needed...
 }

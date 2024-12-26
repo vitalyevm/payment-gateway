@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentController } from 'src/modules/controllers/payment.controller';
-import { CreatePaymentDto } from 'src/modules/dto/create-payment.dto';
-import { PaymentOrchestratorService } from 'src/modules/services/payment-orchestrator.service';
+import { PaymentController } from 'src/modules/payment/controllers/payment.controller';
+import { CreatePaymentDto } from 'src/modules/payment/dto/create-payment.dto';
+import { PaymentOrchestratorService } from 'src/modules/payment/services/payment-orchestrator.service';
 
 describe('PaymentController (Unit)', () => {
   let controller: PaymentController;

@@ -13,7 +13,7 @@ export class PaymentProcessingService {
       // ...
       // For now, assume success
       return { success: true, pspRef: 'PSP123456' };
-    } catch (err) {
+    } catch (err: any) {
       return { success: false };
     }
   }

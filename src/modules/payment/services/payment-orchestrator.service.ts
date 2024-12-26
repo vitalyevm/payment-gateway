@@ -1,4 +1,5 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+// src/modules/payment/services/payment-orchestrator.service.ts
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { PaymentResponseDto } from '../dto/payment-response.dto';
 import { RiskEngineService } from './risk-engine.service';
@@ -18,7 +19,13 @@ export class PaymentOrchestratorService {
     private readonly wallet: WalletService,
   ) {}
 
-  async createPayment(dto: CreatePaymentDto): Promise<PaymentResponseDto> {
+  /**
+   * Orchestrate pay-in / pay-out flow
+   */
+  async createPayment(
+    dto: CreatePaymentDto,
+    userId: string,
+  ): Promise<PaymentResponseDto> {
     // 1. Idempotency check
     const existingPayment = await this.paymentService.findByCheckoutUuid(
       dto.checkoutUuid,
@@ -27,14 +34,27 @@ export class PaymentOrchestratorService {
       throw new HttpException('Duplicate payment request', HttpStatus.CONFLICT);
     }
 
-    // 2. Create Payment record in DB (status: PENDING)
+    // 2. OVERRIDE fromAcct with the user's actual wallet account
+    const userWallet = await this.wallet.findWalletByUserId(userId);
+    if (!userWallet) {
+      throw new HttpException('User has no wallet', HttpStatus.BAD_REQUEST);
+    }
+    dto.fromAcct = userWallet.accountId; // override
+
+    // 3. Check if fromAcct belongs to the authenticated user
+    //    (We've just set fromAcct from the userWallet, so this is just a safety check.)
+    if (userWallet.userId !== userId) {
+      // The user does not own fromAcct
+      throw new HttpException('Unauthorized wallet', HttpStatus.FORBIDDEN);
+    }
+
+    // 4. Create Payment record in DB (status: PENDING)
     const newPayment: PaymentDocument = await this.paymentService.create(dto);
     const paymentIdStr = newPayment._id.toString();
 
-    // 3. Risk check
-    const riskResult = await this.riskEngine.evaluate(newPayment);
+    // 5. Risk check (FAKE user validation)
+    const riskResult = await this.riskEngine.evaluate(newPayment, userId);
     if (!riskResult.approved) {
-      // Mark payment as REJECTED and return
       await this.paymentService.updateStatus(paymentIdStr, 'REJECTED');
       throw new HttpException(
         'Payment rejected by risk engine',
@@ -42,16 +62,14 @@ export class PaymentOrchestratorService {
       );
     }
 
-    // 4. Attempt Payment Processing with PSP
+    // 6. Attempt Payment Processing with PSP
     const pspResult = await this.processing.processPayment(newPayment);
     if (!pspResult.success) {
-      // Mark payment as FAILED
       await this.paymentService.updateStatus(paymentIdStr, 'FAILED');
       throw new HttpException('PSP payment failed', HttpStatus.BAD_GATEWAY);
     }
 
-    // 5. Update ledger (double-entry) & wallet
-    // Debit from from_acct, credit to to_acct
+    // 7. Update ledger (double-entry)
     await this.ledger.recordTransaction({
       paymentId: paymentIdStr,
       fromAcct: dto.fromAcct,
@@ -60,13 +78,14 @@ export class PaymentOrchestratorService {
       currency: dto.currency,
     });
 
-    // Update Wallet (for example, if user’s wallet is credited)
-    await this.wallet.updateBalance(dto.toAcct, dto.amount);
+    // 8. Update wallets (debit/credit)
+    await this.wallet.updateBalance(dto.fromAcct, `-${dto.amount}`);
+    await this.wallet.updateBalance(dto.toAcct, `+${dto.amount}`);
 
-    // 6. Mark Payment as COMPLETE
+    // 9. Mark Payment as COMPLETED
     await this.paymentService.updateStatus(paymentIdStr, 'COMPLETED');
 
-    // 7. Return final Payment object
+    // 10. Return final Payment object
     return await this.paymentService.buildPaymentResponse(paymentIdStr);
   }
 
@@ -74,18 +93,5 @@ export class PaymentOrchestratorService {
     return this.paymentService.buildPaymentResponse(paymentId);
   }
 
-  // The following methods handle scheduled-payment flows
-  async createScheduledPayment(dto: any) {
-    // store schedule info in DB
-  }
-
-  async getScheduledPayment(id: string) {
-    /* ... */
-  }
-  async updateScheduledPayment(id: string, dto: any) {
-    /* ... */
-  }
-  async deleteScheduledPayment(id: string) {
-    /* ... */
-  }
+  // Scheduled payment methods...
 }
